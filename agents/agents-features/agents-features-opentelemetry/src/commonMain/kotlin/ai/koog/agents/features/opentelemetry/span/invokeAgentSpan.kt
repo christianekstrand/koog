@@ -209,8 +209,11 @@ internal fun endInvokeAgentSpan(
     )
 
     // gen_ai.output.messages
-    if (messages.isNotEmpty()) {
-        span.addAttribute(GenAIAttributes.Output.Messages(messages))
+    // Only the assistant responses produced during the run. The request side is already reported
+    // by gen_ai.input.messages, so emitting the whole conversation here would duplicate it.
+    val responseMessages = messages.filterIsInstance<Message.Assistant>()
+    if (responseMessages.isNotEmpty()) {
+        span.addAttribute(GenAIAttributes.Output.Messages(responseMessages))
     }
 
     spanAdapter?.onBeforeSpanFinished(span)
