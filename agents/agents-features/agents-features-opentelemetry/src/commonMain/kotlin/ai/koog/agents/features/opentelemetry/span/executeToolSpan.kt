@@ -41,6 +41,7 @@ private val logger = KotlinLogging.logger { }
  * @param contextFactory The context factory to use for creating the span context.
  * @param parentSpan The parent span for the new span.
  * @param id The unique identifier for the span.
+ * @param runId The id of the agent run, used as the conversation id.
  * @param toolName The name of the tool being called.
  * @param toolArgs The arguments for the tool call.
  * @param toolDescription The description of the tool.
@@ -53,6 +54,7 @@ internal fun startExecuteToolSpan(
     contextFactory: ContextFactory,
     parentSpan: GenAIAgentSpan?,
     id: String,
+    runId: String,
     toolName: String,
     toolArgs: JsonObject,
     toolDescription: String?,
@@ -71,6 +73,8 @@ internal fun startExecuteToolSpan(
         .addAttribute(GenAIAttributes.Operation.Name(GenAIAttributes.Operation.OperationNameType.EXECUTE_TOOL))
         // gen_ai.provider.name
         .addAttribute(GenAIAttributes.Provider.Name(KoogAttributes.PROVIDER_NAME))
+        // gen_ai.conversation.id
+        .addAttribute(GenAIAttributes.Conversation.Id(runId))
 
     // gen_ai.tool.call.id
     toolCallId?.let { callId ->
