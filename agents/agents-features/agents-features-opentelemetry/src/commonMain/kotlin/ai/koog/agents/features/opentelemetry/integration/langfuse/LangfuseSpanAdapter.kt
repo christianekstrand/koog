@@ -44,6 +44,13 @@ internal class LangfuseSpanAdapter(
                 runId?.let { runId ->
                     span.addAttribute(CustomAttribute("langfuse.session.id", runId))
                 }
+
+                val inputMessages = span.attributes
+                    .filterIsInstance<GenAIAttributes.Input.Messages>()
+                    .firstOrNull()
+                inputMessages?.let { attribute ->
+                    copyToRootObservation(span, "langfuse.observation.input", attribute.value)
+                }
             }
 
             SpanType.INFERENCE -> {
@@ -99,11 +106,39 @@ internal class LangfuseSpanAdapter(
                     applyCompletionAttributes(span, index, message)
                 }
             }
+
+            SpanType.INVOKE_AGENT -> {
+                val outputMessages = span.attributes
+                    .filterIsInstance<GenAIAttributes.Output.Messages>()
+                    .firstOrNull()
+                outputMessages?.let { attribute ->
+                    copyToRootObservation(span, "langfuse.observation.output", attribute.value)
+                }
+            }
+
             else -> {}
         }
     }
 
     //region Private Methods
+
+    /**
+     * Copies a run-level attribute value onto the trace-root `create_agent` span.
+     *
+     * Langfuse v4 is observations-first: it expects the overall request and response on the ROOT
+     * observation, and its observation-level evaluators do not read child observations. Koog's root
+     * is the `create_agent` span, which carries neither, so the values are copied up from
+     * `invoke_agent`.
+     *
+     * Safe by construction: attributes are flushed to the underlying OTel span only in
+     * [GenAIAgentSpan.end], and the parent ends after its children, so a write from a child hook is
+     * still exported. The type guard means a future change to the span hierarchy degrades to a
+     * no-op rather than writing to the wrong span.
+     */
+    private fun copyToRootObservation(span: GenAIAgentSpan, key: String, value: Any) {
+        val root = span.parentSpan?.takeIf { parent -> parent.type == SpanType.CREATE_AGENT } ?: return
+        root.addAttribute(CustomAttribute(key, value))
+    }
 
     private fun applyPromptAttributes(span: GenAIAgentSpan, index: Int, message: Message) {
         when (message) {
