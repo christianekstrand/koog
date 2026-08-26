@@ -87,7 +87,14 @@ public fun OpenTelemetryConfig.addLangfuseExporter(
     addSpanExporter(
         OtlpJsonSpanExporter(
             endpoint = "$url/api/public/otel/v1/traces",
-            headers = mapOf("Authorization" to "Basic $auth"),
+            headers = mapOf(
+                "Authorization" to "Basic $auth",
+                // Selects Langfuse's v4 ingestion path. Without it, directly ingested OTel data
+                // takes the legacy dual-write path and can be delayed by up to 10 minutes. Safe on
+                // every Langfuse version: servers predating the header ignore it, and the check
+                // (langfuse/langfuse@b3a2628d9, 2026-02-17) rejects only values above 4.
+                "x-langfuse-ingestion-version" to "4",
+            ),
             timeout = timeout ?: defaultRequestTimeout,
         )
     )
