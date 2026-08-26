@@ -404,7 +404,7 @@ public class OpenTelemetry {
 
                 endInvokeAgentSpan(
                     span = invokeAgentSpan,
-                    messages = eventContext.context.llm.prompt.messages.toList(),
+                    messages = eventContext.context.config.prompt.messages.toList(),
                     model = eventContext.context.config.model,
                     error = eventContext.error,
                     verbose = config.isVerbose,
